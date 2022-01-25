@@ -1,0 +1,239 @@
+esphome:
+  name: multi
+
+esp8266:
+  board: nodemcuv2
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+  password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: !secret ap_ssid
+    password: !secret ap_password
+
+captive_portal:
+
+web_server:
+  port: 80
+
+i2c:
+  scl: D1 
+  sda: D2
+  scan: True
+  id: bus_a
+
+uart:
+  rx_pin: D5
+  tx_pin: D6
+  baud_rate: 9600
+  id: bus_b
+  
+binary_sensor:
+  - platform: status
+    name: "ESP Multi Status"
+    id: esp_status
+
+sensor:
+  - platform: adc
+    pin: VCC
+    name: "ESP Multi Voltage"
+    
+  - platform: bh1750
+    name: "ESP Multi Illuminance"
+    id: bh1750_illuminance
+    address: 0x23
+    measurement_duration: 69
+    update_interval: 10s
+    
+  - platform: bmp280
+    i2c_id: bus_a
+    temperature:
+      name: "ESP Multi Temperature"
+      id: bmp280_temperature
+      oversampling: 16x
+    pressure:
+      name: "ESP Multi Pressure"
+      id: bmp280_pressure
+      oversampling: 16x
+    address: 0x76
+    update_interval: 60s
+  
+  - platform: dht
+    model: AM2302
+    pin: D0
+    temperature:
+      name: "ESP Multi dht Temperature"
+      id: dht_temperature
+    humidity:
+      name: "ESP Multi dht Humidity"
+      id: dht_humidity
+    update_interval: 60s
+  
+  - platform: sds011
+    pm_2_5:
+      name: "ESP Multi <2.5µm Concentration"
+      id: PM_2_5
+    pm_10_0:
+      name: "ESP Multi <10.0µm Concentration"
+      id: PM_10_0
+    update_interval: 5min
+    
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "ESP Multi IP Address"
+      id: esp_ip
+    ssid:
+      name: "ESP Multi WIFI SSID"
+      id: esp_ssid
+    mac_address:
+      name: "ESP Multi MAC Address"
+      id: esp_mac
+      
+display:
+  - platform: ssd1306_i2c
+    id: oled_display
+    model: "SH1106 128x64"
+    address: 0x3C
+    contrast: 50%
+    
+    pages:
+      - id: page1
+        lambda: |-
+          it.rectangle(0, 0, 126, 15);
+          it.printf(64,12, id(font1), TextAlign::BASELINE_CENTER, "Air Quality");
+          it.printf(1, 27, id(font1), TextAlign::BASELINE_LEFT, "PM 2.5:");
+          it.printf(125, 27, id(font1), TextAlign::BASELINE_RIGHT, "%.2f ug/m3", id(PM_2_5).state);
+          it.printf(1, 39, id(font1), TextAlign::BASELINE_LEFT, "PM 10:");
+          it.printf(125, 39, id(font1), TextAlign::BASELINE_RIGHT, "%.2f ug/m3", id(PM_10_0).state);
+      - id: page2
+        lambda: |-
+          it.rectangle(0, 0, 126, 15);
+          it.printf(64,12, id(font1), TextAlign::BASELINE_CENTER, "Environment");
+          it.printf(1, 27, id(font1), TextAlign::BASELINE_LEFT, "T: ");
+          it.printf(70, 27, id(font1), TextAlign::BASELINE_RIGHT, "%.2f °C", id(bmp280_temperature).state);
+          it.printf(125, 27, id(font1), TextAlign::BASELINE_RIGHT, "%.2f °C", id(dht_temperature).state);
+          it.printf(1, 39, id(font1), TextAlign::BASELINE_LEFT, "P: ");
+          it.printf(125, 39, id(font1), TextAlign::BASELINE_RIGHT, "%.2f hPa", id(bmp280_pressure).state);
+          it.printf(1, 51, id(font1), TextAlign::BASELINE_LEFT, "H: ");
+          it.printf(125, 51, id(font1), TextAlign::BASELINE_RIGHT, "%.2f %%", id(dht_humidity).state);
+          it.printf(1, 63, id(font1), TextAlign::BASELINE_LEFT, "I:");
+          it.printf(125, 63, id(font1), TextAlign::BASELINE_RIGHT, "%.2f lx", id(bh1750_illuminance).state);
+      - id: page3
+        lambda: |-
+          it.rectangle(0, 0, 126, 15);
+          it.printf(64,12, id(font1), TextAlign::BASELINE_CENTER, "Network");
+          it.printf(1, 27, id(font1), TextAlign::BASELINE_LEFT, "SSID:");
+          it.printf(125, 27, id(font1), TextAlign::BASELINE_RIGHT, "%s", id(esp_ssid).state.c_str());
+          it.printf(1, 39, id(font1), TextAlign::BASELINE_LEFT, "IP");
+          it.printf(125, 39, id(font1), TextAlign::BASELINE_RIGHT, "%s", id(esp_ip).state.c_str());
+          it.printf(1, 51, id(font1), TextAlign::BASELINE_LEFT, "Mac:");
+          it.printf(125, 51, id(font1), TextAlign::BASELINE_RIGHT, "%s", id(esp_mac).state.c_str());
+    
+    
+    
+    
+    
+    
+    
+interval:
+  - interval: 10s
+    then:
+      - display.page.show_next: oled_display
+      - component.update: oled_display  
+    
+
+font:
+  - file: 'hack.ttf'
+    id: font1
+    size: 10
+    glyphs:
+    - ' '
+    - '/'
+    - '!'
+    - '"'
+    - '%'
+    - (
+    - )
+    - +
+    - ','
+    - '-'
+    - .
+    - '0'
+    - '1'
+    - '2'
+    - '3'
+    - '4'
+    - '5'
+    - '6'
+    - '7'
+    - '8'
+    - '9'
+    - ':'
+    - A
+    - B
+    - C
+    - D
+    - E
+    - F
+    - G
+    - H
+    - I
+    - J
+    - K
+    - L
+    - M
+    - N
+    - O
+    - P
+    - Q
+    - R
+    - S
+    - T
+    - U
+    - V
+    - W
+    - X
+    - Y
+    - Z
+    - _
+    - a
+    - b
+    - c
+    - d
+    - e
+    - f
+    - g
+    - h
+    - i
+    - j
+    - k
+    - l
+    - m
+    - n
+    - o
+    - p
+    - q
+    - r
+    - s
+    - t
+    - u
+    - v
+    - w
+    - x
+    - y
+    - z
+    - °
+
+    
